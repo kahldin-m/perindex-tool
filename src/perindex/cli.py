@@ -4,20 +4,21 @@ import os
 import sys
 import perindex.core as core
 
+from rich import print
+from rich.panel import Panel
+from rich import box
+
 # CONSTANTS
 WELCOME_TEXT = """
---------------------------------------------------------------
-||                                                    ||     |
-||    WELCOME TO PERINDEX CHARACTER ARCHIVAL TOOL     ||     |
-||                                                    ||     |
---------------------------------------------------------------
-|| OPTIONS 1-4:                                       ||     |
-||   [1] CREATE Character Card                        ||     |
-||   [2] LOAD Character Card                          ||     |
-||   [3] VIEW Character Archive                       ||     |
-||   [4] EXIT                                         ||     |
---------------------------------------------------------------
-"""
+  Welcome to Perindex character archival tool. Type a number
+  or action from the list below:
+        
+======================================================================
+    [1] CREATE Character Card
+    [2] LOAD Character Card
+    [3] VIEW Character Archive
+    [4] EXIT
+""" # was 63 '-' , 5 text 5 || 5 |
 
 # UTILS
 def close():
@@ -27,7 +28,7 @@ def clear():
     os.system("cls" if os.name == "nt" else "clear")
 
 def welcome_screen():
-    print(WELCOME_TEXT)
+    print(Panel(WELCOME_TEXT, expand=False, box=box.DOUBLE))
     return input(">>  ").strip().upper()
 
 # MAIN
@@ -39,6 +40,7 @@ def main():
             
             n = welcome_screen()
             if n in {"1", "CREATE"}:
+                clear()
                 core.create_character()
             elif n in {"2", "LOAD"}:
                 core.load_character()
