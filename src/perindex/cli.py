@@ -43,7 +43,9 @@ def main():
                 clear()
                 core.create_character()
             elif n in {"2", "LOAD"}:
-                core.load_character()
+                clear()
+                card_data = core.load_character_yaml()
+                core.display_character_card(card_data)
             elif n in {"3", "VIEW"}:
                 core.plain_list()
             elif n in {"4", "EXIT"}:

@@ -8,7 +8,7 @@ Perindex-Tool is a terminal‑based character archival utility for worldbuilders
   - Menu, routing, loop, placeholder functions.
 - Day 2: Character Creation ✔
   - Prompt user -> build YAML -> save file.
-- Day 3: Load Character
+- Day 3: Load Character ✔
   - Load character cards by smart-name search from saved yaml file.
 - Day 4: Sorting
   - Sort by name, world, creation date, etc.
@@ -17,7 +17,7 @@ Perindex-Tool is a terminal‑based character archival utility for worldbuilders
 - Day 6: Archive Overview
   - List all characters, basic metadata.
 - Day 7: Schema Validation + Data Integrity
-  - Ensure every character file is valid, consistent, and complete.
+  - Ensure every character file is valid, consistent and complete.
 
 - Alt-User Instructions:
   - Cloning the tool
