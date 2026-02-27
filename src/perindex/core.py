@@ -2,15 +2,19 @@
 # IMPORTS
 # from rich.console import Console # 14.3.3
 import os
-
+import math
 import yaml
+import shutil
+
 from rich import box, print
 from rich.panel import Panel
+
 
 # CONSTANTS
 VERSION = 1
 DEBUG_MODE = 0
 DIRECTORY_TEST = "data/test"
+CHAR_FILES = os.listdir(DIRECTORY_TEST)
 
 CREATE_START = """
   Follow the prompts below to complete the character creation process.
@@ -28,11 +32,11 @@ CREATE_END = """
   to be associated with this character in the archive systems?
   Brighter variants are also available: Bold Red, Bold Green, etc..
 ======================================================================
-  - [red]Red[/] ([bold red]bold[/])             - [magenta]Magenta[/]
-  - [yellow]Yellow[/] ([bold yellow]bold[/])    - [black on white]Black[/]
-  - [green]Green[/] ([bold green]bold[/])       - [white]White[/]
-  - [cyan]Cyan[/]([bold cyan]bold[/])           - [bold black on white]Panda
-  - [blue on black]Blue[/] ([bold blue on black]bold[/])
+  - [red]Red[/] ([bold red]bold[/])           - [magenta]Magenta[/] ([bold magenta]bold[/])
+  - [yellow]Yellow[/] ([bold yellow]bold[/])        - [white]White[/] ([bold white]bold[/])
+  - [green]Green[/] ([bold green]bold[/])         - [black on white]Black[/] ([bold black on white]bold[/])
+  - [cyan]Cyan[/] ([bold cyan]bold[/])
+  - [blue]Blue[/] ([bold blue]bold[/])
 """
 
 AVAILABLE_COLORS = {
@@ -42,7 +46,7 @@ AVAILABLE_COLORS = {
     "cyan",
     "blue",
     "magenta",
-    "black on white",
+    "black",
     "white",
     "bold red",
     "bold yellow",
@@ -50,7 +54,7 @@ AVAILABLE_COLORS = {
     "bold cyan",
     "bold blue",
     "bold magenta",
-    "bold black on white",
+    "bold black",
     "bold white",
 }
 
@@ -59,16 +63,24 @@ LOAD_START = """
   Partial names are allowed.
 """
 
-AC_TEXT = """
-[black on red]_Testificate[/]
-[black on yellow]Alex[/]
-[black on green]Baron[/]
-[black on blue]Charlie[/]
-[black on magenta]Vecna[/]
+ARCHIVE_START = """
+  Please select a sort method:
+  (Sorted alphabetically by default)
+======================================================================
+  1. First Name             6. Race/Species
+  2. Last Name              7. Tags
+  3. Gender
+  4. Class/Role
+  5. World/Setting
 """
 
 
 # UTILS
+
+# Clean up the terminal space
+def clear():
+    os.system("cls" if os.name == "nt" else "clear")
+
 # console = Console()
 def capatalize_keys(data):
     new_data = {}
@@ -79,6 +91,7 @@ def capatalize_keys(data):
 
 
 # CLI TOOLS
+# SAVE FUNCTION
 def save_character_yaml(char_data, directory):
     # Ensure directory exists
     os.makedirs(directory, exist_ok=True)
@@ -114,7 +127,7 @@ def save_character_yaml(char_data, directory):
     print(f"[bold green]Saved character to archive at:[/] '{full_path}'")
     return True
 
-
+# CREATE FUNCTION
 def create_character():
     new_char = {
         "version": VERSION,
@@ -156,11 +169,16 @@ def create_character():
         tags = False
     color_picking = True
     while color_picking:
-        os.system("cls" if os.name == "nt" else "clear")
+        clear()
         print(Panel.fit(CREATE_END, title="CHARACTER CREATOR", box=box.DOUBLE))
         color_choice = input("Card color: ").lower()
         if color_choice in AVAILABLE_COLORS:
-            new_char["card_color"] = color_choice
+            if color_choice == "black":
+                new_char["card_color"] = "black on white"
+            elif color_choice == "bold black":
+                new_char["card_color"] = "bold black on white"
+            else:
+                new_char["card_color"] = color_choice
             color_picking = False
         else:
             print(
@@ -170,20 +188,19 @@ def create_character():
 
     save_character_yaml(new_char, DIRECTORY_TEST)
 
-
+# LOAD FUNCTION
 def load_character_yaml():
     searching = True
     file_path = ""
 
     while searching:
-        char_files = os.listdir(DIRECTORY_TEST)
         print(Panel.fit(LOAD_START, box=box.DOUBLE))
         name = input(">> ").lower()
 
         # Normalizing search key
         search_key = "_".join(name.split())
         matches = []
-        for char in char_files:
+        for char in CHAR_FILES:
             lower_name = char.lower()
             if search_key in lower_name:
                 matches.append(char)
@@ -228,29 +245,31 @@ def load_character_yaml():
         char_card = yaml.safe_load(file)
         return char_card
 
-
+# DISPLAY FUNCTION
 def display_character_card(char_data):
     panel_style = f"{char_data['card_color']}"
+    name_parts = [char_data.get("first_name", ""), char_data.get("middle_name", ""), char_data.get("last_name", "")]
+    name_full = " ".join(p for p in name_parts if p)
     left = [
-        f'Name: {char_data["first_name"]} {char_data["middle_name"]} {char_data["last_name"]}',
-        f'Title: {char_data["title"]}',
-        f'Role: {char_data["role"]}',
-        f'Race: {char_data["race"]}',
-        f'Hair: {char_data["hair"]}',
+        f'Name: {name_full}',
+        f'Title: {char_data.get("title")}',
+        f'Role: {char_data.get("role")}',
+        f'Race: {char_data.get("race")}',
+        f'Hair: {char_data.get("hair")}',
     ]
 
     right = [
-        f'Gender: {char_data["gender"]}',
-        f'Style: {char_data["card_color"]}',
-        f'World: {char_data["world"]}',
-        f'Skin: {char_data["skin"]}',
-        f'Eye: {char_data["eye"]}',
+        f'Gender: {char_data.get("gender")}',
+        f'Style: {char_data.get("card_color")}',
+        f'World: {char_data.get("world")}',
+        f'Skin: {char_data.get("skin")}',
+        f'Eye: {char_data.get("eye")}',
     ]
     
     lines = []
     for l, r in zip(left, right):
         lines.append(f"{l:<30} {r}")
-    tags_str = ", ".join(char_data["tags"])
+    tags_str = ", ".join(char_data.get("tags", ""))
     lines.append(f"Tags: {tags_str}")
     
     # Previously: LOAD_CARD = yaml.dump(capatalize_keys(char_data), sort_keys=False)
@@ -259,12 +278,115 @@ def display_character_card(char_data):
         Panel.fit(
             LOAD_CARD,
             style=panel_style,
-            title=f"[{char_data['card_color']}]{char_data['first_name']}'s CHARACTER CARD",
+            title=f"[{char_data.get('card_color', 'white')}]{char_data['first_name']}'s CHARACTER CARD",
             safe_box=True,
             box=box.DOUBLE,
         )
     )
 
+# ARCHIVE HELPER
+def build_display(card, attr_name):
+    # Build base name
+    fn = card.get("first_name", "")
+    ln = card.get("last_name", "")
+    if fn and ln:
+        base_name = f"{fn} {ln}"
+    else:
+        base_name = fn or ln or "zUnknown Name"
+    
+    # NAME SORT MODES
+    if attr_name == "first_name":
+        return base_name
+    elif attr_name == "last_name":
+        if ln and fn:
+            return f"{fn} ({ln})"
+        if ln:
+            return ln
+        return fn
+        
+    # ATTRBUTE SORT MODE
+        
+    # Take an attribute: "gender", "world", "role" etc.
+    attr_value = card.get(f"{attr_name}", "")
+    if isinstance(attr_value, list):
+        attr_value = ", ".join(tag.lower() for tag in attr_value)
+    attr_part = f"({attr_value})" if attr_value else ""
 
-def plain_list():
-    print(Panel.fit(AC_TEXT, title="CHARACTER CREATION PANEL", box=box.DOUBLE))
+    return f"{base_name} {attr_part}".strip()
+
+# ARCHIVE DISPLAY
+def archive_display_cards(cards):
+    height = shutil.get_terminal_size().lines
+    twidth = shutil.get_terminal_size().columns
+    wresize = 72 if twidth > 72 else twidth
+    usable = height - 6  # Adjusting for panel borders, title, padding
+    
+    # Using a paging loop to ensure readability if the archive is bigger than 10 cards
+    current_page = 1
+    total_cards = len(cards) # Actually total_cards ...
+    total_pages = max(1, math.ceil(total_cards / usable))
+    index = 0
+    
+    while index < total_cards:
+        page = cards[index:index + usable]
+        clear()
+        print(Panel("\n".join(page), title=f"Page {current_page}/{total_pages}", box=box.DOUBLE, width=wresize, padding=1))
+        index += usable
+        current_page += 1
+        if index < total_cards:
+            input("\nPress Enter to go to next page >>")
+
+
+# SORT LOGIC
+def archive_sort_cards(sort_type):
+    cards = []
+    for f in CHAR_FILES:
+        with open(os.path.join(DIRECTORY_TEST, f), "r") as file:
+            card = yaml.safe_load(file)
+            cards.append(card)
+
+    match sort_type:
+        case "1":
+            print("[green]OPTION 1: First Name[/]")
+            sorted_cards = sorted(cards, key=lambda c: c.get("first_name", ""))
+            display = [build_display(c, "first_name") for c in sorted_cards]
+            archive_display_cards(display) 
+        case "2":
+            print("[blue]OPTION 2: Last Name[/]")
+            sorted_cards = sorted(cards, key=lambda c: c.get("last_name", ""))
+            display = [build_display(c, "last_name") for c in sorted_cards]
+            archive_display_cards(display) 
+        case "3":
+            print("[red]OPTION 3: Gender[/]")
+            sorted_cards = sorted(cards, key=lambda c: c.get("gender", ""))
+            display = [build_display(c, "gender") for c in sorted_cards]
+            archive_display_cards(display) 
+        case "4":
+            print("[green]OPTION 4: Role[/]")
+            sorted_cards = sorted(cards, key=lambda c: c.get("role", ""))
+            display = [build_display(c, "role") for c in sorted_cards]
+            archive_display_cards(display) 
+        case "5":
+            print("[blue]OPTION 5: World[/]")
+            sorted_cards = sorted(cards, key=lambda c: c.get("world", ""))
+            display = [build_display(c, "world") for c in sorted_cards]
+            archive_display_cards(display) 
+        case "6":
+            print("[red]OPTION 6: Race[/]")
+            sorted_cards = sorted(cards, key=lambda c: c.get("race", ""))
+            display = [build_display(c, "race") for c in sorted_cards]
+            archive_display_cards(display) 
+        case "7":
+            print("[green]OPTION 7: Tags[/]")
+            sorted_cards = sorted(cards, key=lambda c: ', '.join(tag.lower() for tag in c.get("tags", [])))
+            display = [build_display(c, "tags") for c in sorted_cards]
+            archive_display_cards(display) 
+        case _:
+            print("Invalid sort type/out of option range (1-10)")
+
+# SORT DISPLAY
+def archive_select_mode():
+    print(Panel.fit(ARCHIVE_START, box=box.DOUBLE))
+    choice = input("Sort type number:  ")
+    clear()
+    archive_sort_cards(choice)

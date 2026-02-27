@@ -1,6 +1,6 @@
 # cli.py
 # IMPORTS
-import os
+# import os
 import sys
 import perindex.core as core
 
@@ -24,8 +24,6 @@ WELCOME_TEXT = """
 def close():
     print("\n>> Exiting Perindex-Tool")
     sys.exit(0)
-def clear():
-    os.system("cls" if os.name == "nt" else "clear")
 
 def welcome_screen():
     print(Panel(WELCOME_TEXT, expand=False, box=box.DOUBLE))
@@ -34,20 +32,21 @@ def welcome_screen():
 # MAIN
 def main():
     try:
-        clear()
+        core.clear()
         # choice branches
         while True:
             
             n = welcome_screen()
             if n in {"1", "CREATE"}:
-                clear()
+                core.clear()
                 core.create_character()
             elif n in {"2", "LOAD"}:
-                clear()
+                core.clear()
                 card_data = core.load_character_yaml()
                 core.display_character_card(card_data)
             elif n in {"3", "VIEW"}:
-                core.plain_list()
+                core.clear()
+                core.archive_select_mode()
             elif n in {"4", "EXIT"}:
                 close()
             else:

@@ -1,5 +1,6 @@
 # Ignored directories
-data/test
+data/
+pyrightconfig.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -141,6 +142,7 @@ celerybeat.pid
 .env
 .envrc
 .venv
+.venv-win
 env/
 venv/
 ENV/
