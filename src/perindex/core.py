@@ -13,8 +13,8 @@ from rich.panel import Panel
 # CONSTANTS
 VERSION = 1
 DEBUG_MODE = 0
+DIRECTORY_CHARS = "data/characters"
 DIRECTORY_TEST = "data/test"
-CHAR_FILES = os.listdir(DIRECTORY_TEST)
 
 CREATE_START = """
   Follow the prompts below to complete the character creation process.
@@ -66,7 +66,7 @@ LOAD_START = """
 ARCHIVE_START = """
   Please select a sort method:
   (Sorted alphabetically by default)
-======================================================================
+  ----------------------------------------------------------------------
   1. First Name             6. Race/Species
   2. Last Name              7. Tags
   3. Gender
@@ -74,6 +74,12 @@ ARCHIVE_START = """
   5. World/Setting
 """
 
+DEV_TOOL_TEXT = """
+  Edit which field?
+======================================================================
+  1. Version
+  2. BACK
+"""
 
 # UTILS
 
@@ -88,7 +94,21 @@ def capatalize_keys(data):
         new_key = key.replace("_", " ").title()
         new_data[new_key] = value
     return new_data
+    
 
+def update_char_data(char, field, new_data):
+    if char not in os.listdir(DIRECTORY_TEST):
+            input(f"[bold red]'{char}' not found! Continue...[/]")
+            return
+    char_path = os.path.join(DIRECTORY_TEST, char)
+    char_dict = {}
+    with open(char_path, "r") as file:
+        char_dict = yaml.safe_load(file)
+    with open(char_path, "w") as file:
+        char_dict[field] = new_data
+        yaml.dump(char_dict, file, sort_keys=False)
+    print(f"[bold green]Successfully updated {char} file[/]")
+    
 
 # CLI TOOLS
 # SAVE FUNCTION
@@ -196,26 +216,28 @@ def load_character_yaml():
     while searching:
         print(Panel.fit(LOAD_START, box=box.DOUBLE))
         name = input(">> ").lower()
+        if name.strip() == "":
+            break
 
         # Normalizing search key
         search_key = "_".join(name.split())
         matches = []
-        for char in CHAR_FILES:
+        for char in os.listdir(DIRECTORY_TEST):
             lower_name = char.lower()
             if search_key in lower_name:
                 matches.append(char)
 
         if len(matches) == 0:
-            print(f"\n  Unable to locate character card for '{name}'.")
-            input("\nPress Enter to continue...")
+            clear()
+            print(f"\n>>  Unable to locate character card for '{name}'.")
             continue
 
         if len(matches) == 1:
             file_path = matches[0]
             print(
-                f"\n  Match found for '{name}' {file_path}! Loading character card..."
+                f"\n  Match found for '{name}': {file_path}"
             )
-            input("\nPress Enter to continue...")
+            # input("\n>> Press Enter to continue...")
             searching = False
             continue
 
@@ -225,20 +247,23 @@ def load_character_yaml():
                 print(f"    {i}. {f}")
             idx = input("\nSelect a character by number: ").strip()
             if not idx.isdigit():
-                print("\n  Please enter a valid number.")
+                clear()
+                print(f"\n>> Please enter a number: (1-{len(matches)}).")
                 continue
 
             selection = int(idx)
             if selection < 1 or selection > len(matches):
-                print(f"\n  That number is out of range: (1-{len(matches)})")
+                clear()
+                print(f"\n>> That number is out of range: (1-{len(matches)})")
                 continue
 
             # Valid selection
             file_path = matches[selection - 1]
             print(f"\n  Loading character card: ({file_path})")
-            input("\nPress Enter to continue...")
             searching = False
 
+    if file_path.strip() == "":
+        return None
     # Load YAML
     card_path = os.path.join(DIRECTORY_TEST, file_path)
     with open(card_path, "r") as file:
@@ -267,8 +292,8 @@ def display_character_card(char_data):
     ]
     
     lines = []
-    for l, r in zip(left, right):
-        lines.append(f"{l:<30} {r}")
+    for lefto, righto in zip(left, right):
+        lines.append(f"{lefto:<30} {righto}")
     tags_str = ", ".join(char_data.get("tags", ""))
     lines.append(f"Tags: {tags_str}")
     
@@ -278,7 +303,7 @@ def display_character_card(char_data):
         Panel.fit(
             LOAD_CARD,
             style=panel_style,
-            title=f"[{char_data.get('card_color', 'white')}]{char_data['first_name']}'s CHARACTER CARD",
+            title=f"[{char_data.get('card_color', 'white')}]{char_data['first_name']}'s Character Card (v{char_data['version']})",
             safe_box=True,
             box=box.DOUBLE,
         )
@@ -340,7 +365,7 @@ def archive_display_cards(cards):
 # SORT LOGIC
 def archive_sort_cards(sort_type):
     cards = []
-    for f in CHAR_FILES:
+    for f in os.listdir(DIRECTORY_TEST):
         with open(os.path.join(DIRECTORY_TEST, f), "r") as file:
             card = yaml.safe_load(file)
             cards.append(card)
@@ -350,37 +375,37 @@ def archive_sort_cards(sort_type):
             print("[green]OPTION 1: First Name[/]")
             sorted_cards = sorted(cards, key=lambda c: c.get("first_name", ""))
             display = [build_display(c, "first_name") for c in sorted_cards]
-            archive_display_cards(display) 
+            archive_display_cards(display)
         case "2":
             print("[blue]OPTION 2: Last Name[/]")
             sorted_cards = sorted(cards, key=lambda c: c.get("last_name", ""))
             display = [build_display(c, "last_name") for c in sorted_cards]
-            archive_display_cards(display) 
+            archive_display_cards(display)
         case "3":
             print("[red]OPTION 3: Gender[/]")
             sorted_cards = sorted(cards, key=lambda c: c.get("gender", ""))
             display = [build_display(c, "gender") for c in sorted_cards]
-            archive_display_cards(display) 
+            archive_display_cards(display)
         case "4":
             print("[green]OPTION 4: Role[/]")
             sorted_cards = sorted(cards, key=lambda c: c.get("role", ""))
             display = [build_display(c, "role") for c in sorted_cards]
-            archive_display_cards(display) 
+            archive_display_cards(display)
         case "5":
             print("[blue]OPTION 5: World[/]")
             sorted_cards = sorted(cards, key=lambda c: c.get("world", ""))
             display = [build_display(c, "world") for c in sorted_cards]
-            archive_display_cards(display) 
+            archive_display_cards(display)
         case "6":
             print("[red]OPTION 6: Race[/]")
             sorted_cards = sorted(cards, key=lambda c: c.get("race", ""))
             display = [build_display(c, "race") for c in sorted_cards]
-            archive_display_cards(display) 
+            archive_display_cards(display)
         case "7":
             print("[green]OPTION 7: Tags[/]")
             sorted_cards = sorted(cards, key=lambda c: ', '.join(tag.lower() for tag in c.get("tags", [])))
             display = [build_display(c, "tags") for c in sorted_cards]
-            archive_display_cards(display) 
+            archive_display_cards(display)
         case _:
             print("Invalid sort type/out of option range (1-10)")
 
@@ -390,3 +415,28 @@ def archive_select_mode():
     choice = input("Sort type number:  ")
     clear()
     archive_sort_cards(choice)
+
+
+# Dev tool helper
+def dev_helper(field, data):
+    confirmation = input(f"Are you sure you wish to update the '{field}' of all cards to '{data}' ?  [yes/no]\n>>  ").strip().lower()
+    if confirmation in {"y", "ye", "yes"}:  
+        for f in os.listdir(DIRECTORY_TEST):
+            print(f"Replacing {f}'s {field} data with {data}")
+            # Load character cards and overwrite their data in the field
+            update_char_data(f, field, data)
+    else:
+        return
+
+
+# DEV UPDATER TOOL
+def dev_tool():
+    print(Panel.fit(DEV_TOOL_TEXT, title="DEV TOOL", box=box.ASCII, style="bold yellow"))
+    d_field = input(">> ")
+    
+    match d_field:
+        case "1":
+            d_data = input("Replace data with what: ").lower().strip()
+            dev_helper("version", d_data)
+        case _:
+            print("Invalid field selection!")
