@@ -5,13 +5,16 @@ import os
 import math
 import yaml
 import shutil
+from datetime import datetime
 
 from rich import box, print
+from rich.table import Table
 from rich.panel import Panel
+# from rich.padding import Padding
 
 
 # CONSTANTS
-VERSION = 1
+VERSION = 0.1
 DEBUG_MODE = 0
 DIRECTORY_CHARS = "data/characters"
 DIRECTORY_TEST = "data/test"
@@ -59,8 +62,8 @@ AVAILABLE_COLORS = {
 }
 
 LOAD_START = """
-  Enter a name for the card you would like to load.
-  Partial names are allowed.
+  Type first of partial name of the character you would like to load.
+  Enter nothing to return to Main Menu.
 """
 
 ARCHIVE_START = """
@@ -87,15 +90,15 @@ DEV_TOOL_TEXT = """
 def clear():
     os.system("cls" if os.name == "nt" else "clear")
 
-# console = Console()
-def capatalize_keys(data):
-    new_data = {}
-    for key, value in data.items():
-        new_key = key.replace("_", " ").title()
-        new_data[new_key] = value
-    return new_data
+# console = Console()      !! UNUSED !!
+# def capatalize_keys(data):
+#     new_data = {}
+#     for key, value in data.items():
+#         new_key = key.replace("_", " ").title()
+#         new_data[new_key] = value
+#     return new_data
     
-
+# DEV TOOL FUNCTION (be careful using this, as it overwrites ALL cards)
 def update_char_data(char, field, new_data):
     if char not in os.listdir(DIRECTORY_TEST):
             input(f"[bold red]'{char}' not found! Continue...[/]")
@@ -112,7 +115,7 @@ def update_char_data(char, field, new_data):
 
 # CLI TOOLS
 # SAVE FUNCTION
-def save_character_yaml(char_data, directory):
+def save_character_yaml(char_data, directory, new_char=True):
     # Ensure directory exists
     os.makedirs(directory, exist_ok=True)
 
@@ -126,8 +129,8 @@ def save_character_yaml(char_data, directory):
         file_name = f"{safe_fname}.yaml"
     full_path = os.path.join(directory, file_name)
 
-    # Prevent accidental overrites
-    if os.path.exists(full_path):
+    # Prevent accidental overrites  -- TO DO: Add confirmation of overwrite, OR incrementing name-tag
+    if new_char and os.path.exists(full_path):
         print(
             f"\n[red]File '{file_name}' already exists. Creating incremented character.[/]"
         )
@@ -141,10 +144,15 @@ def save_character_yaml(char_data, directory):
     # Write YAML character card!
     if DEBUG_MODE:
         print(f"[yellow]DEBUG absolute path: {os.path.abspath(full_path)}[/]")
+    if "date_created" not in char_data:
+        char_data["date_created"] = datetime.now().strftime("%b %d %Y (%H:%M)")
     with open(full_path, "w", encoding="utf-8") as file:
         yaml.dump(char_data, file, sort_keys=False)
-
-    print(f"[bold green]Saved character to archive at:[/] '{full_path}'")
+    
+    if new_char:
+        print(f"[bold green]Saved character to archive:[/] '{full_path}'\nOn {char_data.get('date_created', 'Now')}")
+    else:
+        print(f"[bold green]Updated character at archive:[/] '{full_path}'")
     return True
 
 # CREATE FUNCTION
@@ -166,7 +174,7 @@ def create_character():
         "card_color": "",
     }
 
-    print(Panel.fit(CREATE_START, title="CHARACTER CREATOR", box=box.DOUBLE))
+    print(Panel.fit(CREATE_START, title="[CHARACTER CREATOR]", box=box.DOUBLE))
     new_char["first_name"] = input("First name: ")
     new_char["middle_name"] = input("Middle name: ")
     new_char["last_name"] = input("Last name: ")
@@ -190,7 +198,7 @@ def create_character():
     color_picking = True
     while color_picking:
         clear()
-        print(Panel.fit(CREATE_END, title="CHARACTER CREATOR", box=box.DOUBLE))
+        print(Panel.fit(CREATE_END, title="[CHARACTER CREATOR]", box=box.DOUBLE))
         color_choice = input("Card color: ").lower()
         if color_choice in AVAILABLE_COLORS:
             if color_choice == "black":
@@ -214,7 +222,7 @@ def load_character_yaml():
     file_path = ""
 
     while searching:
-        print(Panel.fit(LOAD_START, box=box.DOUBLE))
+        print(Panel.fit(LOAD_START, title="[Character Loader]", box=box.DOUBLE))
         name = input(">> ").lower()
         if name.strip() == "":
             break
@@ -291,21 +299,35 @@ def display_character_card(char_data):
         f'Eye: {char_data.get("eye")}',
     ]
     
-    lines = []
+    display_t = Table.grid(padding=(0, 4))
+    display_t.add_column(no_wrap=True)
+    display_t.add_column()
+    
     for lefto, righto in zip(left, right):
-        lines.append(f"{lefto:<30} {righto}")
-    tags_str = ", ".join(char_data.get("tags", ""))
-    lines.append(f"Tags: {tags_str}")
+        display_t.add_row(lefto, righto)
+
+    display_t.add_row("Created on", char_data.get("date_created", "The day after tomorrow's yesterday"))
+    tags_str = ", ".join(char_data.get("tags", []))
+    display_t.add_row("Tags", tags_str)
+    
+    # lines = []
+    # for lefto, righto in zip(left, right):
+    #     lines.append(f"{lefto:<30} {righto}")
+    # lines.append(f"Created: {char_data.get('date_created', 'The day after tomorrow\'s yesterday')}")
+    # tags_str = ", ".join(char_data.get("tags", ""))
+    # lines.append(f"Tags: {tags_str}")
+
     
     # Previously: LOAD_CARD = yaml.dump(capatalize_keys(char_data), sort_keys=False)
-    LOAD_CARD = "\n".join(lines)
+    # LOAD_CARD = "\n".join(lines)
     print(
-        Panel.fit(
-            LOAD_CARD,
+        Panel(
+            display_t,
             style=panel_style,
-            title=f"[{char_data.get('card_color', 'white')}]{char_data['first_name']}'s Character Card (v{char_data['version']})",
+            title=f"[[{char_data.get('card_color', 'white')}]{char_data['first_name']}'s Character Card (v{char_data['version']})]",
             safe_box=True,
             box=box.DOUBLE,
+            width=72,
         )
     )
 
@@ -355,7 +377,7 @@ def archive_display_cards(cards):
     while index < total_cards:
         page = cards[index:index + usable]
         clear()
-        print(Panel("\n".join(page), title=f"Page {current_page}/{total_pages}", box=box.DOUBLE, width=wresize, padding=1))
+        print(Panel("\n".join(page), title=f"[Page {current_page}/{total_pages}]", box=box.DOUBLE, width=wresize, padding=1))
         index += usable
         current_page += 1
         if index < total_cards:
@@ -417,6 +439,140 @@ def archive_select_mode():
     archive_sort_cards(choice)
 
 
+
+# OVERVIEW HELPERS
+def overview_helper_counter(field):
+    result = 0
+    for f in os.listdir(DIRECTORY_TEST):
+        with open(os.path.join(DIRECTORY_TEST, f), "r") as file:
+            char_data = yaml.safe_load(file)
+            if field != "tags":
+                if char_data.get(field):
+                    result += 1
+            else:
+                if char_data.get(field):
+                    result += len(char_data.get("tags", []))
+    return result
+
+def overview_helper_dict(field):
+    result = {}
+    for f in os.listdir(DIRECTORY_TEST):
+        with open(os.path.join(DIRECTORY_TEST, f), "r") as file:
+            char_data = yaml.safe_load(file)
+            value = char_data.get(field)
+            if not value:
+                continue
+                
+            match field:
+                case "gender":
+                    v = value.strip().lower()
+                    if v.startswith("m"):
+                        key = "Male"
+                    elif v.startswith("f"):
+                        key = "Female"
+                    else:
+                        key = "Other"
+                    result[key] = result.get(key, 0) + 1
+
+                case "first_name":
+                    v = value[0].strip().upper()
+                    result[v] = result.get(v, 0) + 1
+
+                case "tags":
+                    for tag in value or []:
+                        result[tag] = result.get(tag, 0) + 1
+                case _:
+                    result[value] = result.get(value, 0) + 1
+                    
+    return result
+
+
+def overview_helper_common(dict):
+    total = 0
+    counter = 0
+    common = ""
+    for d in dict:
+        total += 1
+        if dict[d] > counter:
+            counter = dict[d]
+            common = d
+    return total, common
+
+# A counter → total characters
+# A list → all tags
+# A set → unique tags
+# A dict → counts per world
+# A dict → counts per race
+# A dict → counts per role
+# A list → creation dates (if you want earliest/latest)
+
+# BUILD ARCHIVE DATA
+def overview_display():
+    count_tags = overview_helper_dict("tags")
+    count_letters = overview_helper_dict("first_name")
+    count_worlds = overview_helper_dict("world")
+    count_races = overview_helper_dict("race")
+    count_roles = overview_helper_dict("role")
+    count_genders = overview_helper_dict("gender")
+    total_tags, common_tag = overview_helper_common(count_tags)
+    _, common_letter = overview_helper_common(count_letters)
+    total_worlds, common_world = overview_helper_common(count_worlds)
+    total_races, common_race = overview_helper_common(count_races)
+    total_roles, common_role = overview_helper_common(count_roles)
+    
+
+    left = [
+        f'Total Characters: {len(os.listdir(DIRECTORY_TEST))}',
+        f'Total Worlds: {total_worlds}',
+        f'Total Races: {total_races}',
+        f'Total Roles: {total_roles}',
+        f'Total Unique Tags: {total_tags}',
+    ]
+
+    right = [
+        f'Most Common First Initial: {common_letter}',
+        f'Most Common World: {common_world}',
+        f'Most Common Race: {common_race}({count_races[common_race]})',
+        f'Most Common Role: {common_role}({count_roles[common_role]})',
+        f'Most Common Tag: {common_tag}({count_tags[common_tag]})',
+    ]
+    
+    lines = []
+    for lefto, righto in zip(left, right):
+        lines.append(f"  {lefto:<34} {righto}")
+    lines.append(f"  {'Characters per World:':<34} {'Gender Split:'}")
+    lines_worlds = []
+    for world in count_worlds:
+        lines_worlds.append(f"    - {world}: {count_worlds[world]}")
+    lines_genders = []
+    for gen in count_genders:
+        lines_genders.append(f"    - {gen}: {count_genders[gen]}")
+    
+    # HANDLE UNORDERED LISTS
+    max_len = max(len(lines_worlds), len(lines_genders))
+    for i in range(max_len):
+        # Worlds column
+        world = lines_worlds[i] if i < len(lines_worlds) else ""
+        # Genders column
+        gender = lines_genders[i] if i < len(lines_genders) else ""
+        # Mash em together...
+        lines.append(f"  {world:<34} {gender}")
+        
+
+    # Previously: LOAD_CARD = yaml.dump(capatalize_keys(char_data), sort_keys=False)
+    LOAD_CARD = "\n".join(lines)
+    print(
+        Panel(
+            LOAD_CARD,
+            title="[Archive Overview]",
+            safe_box=True,
+            box=box.DOUBLE,
+            width=72,
+        )
+    )
+
+
+
 # Dev tool helper
 def dev_helper(field, data):
     confirmation = input(f"Are you sure you wish to update the '{field}' of all cards to '{data}' ?  [yes/no]\n>>  ").strip().lower()
@@ -431,7 +587,7 @@ def dev_helper(field, data):
 
 # DEV UPDATER TOOL
 def dev_tool():
-    print(Panel.fit(DEV_TOOL_TEXT, title="DEV TOOL", box=box.ASCII, style="bold yellow"))
+    print(Panel.fit(DEV_TOOL_TEXT, title="[DEV TOOL]", box=box.ASCII, style="bold yellow"))
     d_field = input(">> ")
     
     match d_field:

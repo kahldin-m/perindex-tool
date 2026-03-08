@@ -17,7 +17,7 @@ WELCOME_TEXT = """
     [1] CREATE Character Card
     [2] LOAD Character Card
     [3] VIEW Character Archive
-    [4] LIST Archive Metadata (# of characters, total of x tag, etc)
+    [4] LIST Archive Metadata (# of characters, most common world, etc)
     [5] EXIT
 """ # was 63 '-' , 5 text 5 || 5 |
 
@@ -44,7 +44,7 @@ def main():
             elif n in {"2", "LOAD"}:
                 core.clear()
                 card_data = core.load_character_yaml()
-                if card_data == None:
+                if card_data is None:
                     print(">> Canceled LOAD action")
                     continue
                 core.display_character_card(card_data)
@@ -52,7 +52,8 @@ def main():
                 core.clear()
                 core.archive_select_mode()
             elif n in {"4", "LIST"}:
-                print("WIP")
+                core.clear()
+                core.overview_display()
             elif n in {"5", "EXIT"}:
                 core.clear()
                 close()
@@ -60,7 +61,7 @@ def main():
                 core.clear()
                 core.dev_tool()
             else:
-                print("\nInvalid options. Select 1-4 or type CREATE/LOAD/VIEW/LIST/EXIT.")
+                print("\nInvalid selection. Select from 1-5 or type CREATE/LOAD/VIEW/LIST/EXIT.")
             input("\nPress Enter to continue...")
     except KeyboardInterrupt:
         close()
