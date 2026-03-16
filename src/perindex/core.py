@@ -12,14 +12,12 @@ from rich import box, print
 from rich.panel import Panel
 from rich.table import Table
 
-# from rich.padding import Padding
-
 
 # CONSTANTS
-VERSION = 0.1
+VERSION = 1.0
 DEBUG_MODE = 0
 DIRECTORY_CHARS = "data/characters"
-DIRECTORY_TEST = "data/test"
+# DIRECTORY_TEST = "data/test"  # Dev test character folder
 
 CARD_TEMPLATE = {
         "version": VERSION,
@@ -40,14 +38,13 @@ CARD_TEMPLATE = {
     }
 
 WELCOME_TEXT = """
-  Welcome to Perindex character archival tool. Type a number
-  or action from the list below:
-
+  Welcome to the Perindex character archival tool.
+  Enter a number or command from the list below:
 ======================================================================
     [1] CREATE Character Card
-    [2] LOAD/UPDATE Character Card
+    [2] LOAD/EDIT Character Card
     [3] VIEW Character Archive
-    [4] LIST Archive Metadata (# of characters, most common world, etc)
+    [4] LIST Archive Stats (# of characters, most common world, etc)
     [5] EXIT
 """  # was 63 '-' , 5 text 5 || 5 |
 
@@ -55,7 +52,7 @@ CREATE_START = """
   Type the desired information and press Enter to continue.
   You may edit a card later. The following fields will appear in order:
 ======================================================================
-  1. Name               6. Race/Species
+  1. Name               6. Race/Species     11. Card Color
   2. Title              7. Skin Color
   3. Gender             8. Hair Color
   4. Class/Role         9. Eye Color
@@ -63,12 +60,13 @@ CREATE_START = """
 """
 
 CREATE_END = """
-  Finally, what color from the list below would you like
-  to be associated with this character in the archive systems?
-  Brighter variants are also available: Bold Red, Bold Green, etc..
+  Enter the name of a color from the list below that you would like
+  to set as the Card Color for this character.
+  Brighter colors are available by adding 'bold' before the color name.
+  Examples: [yellow]yellow[/], [bold yellow]bold yellow[/], [blue]blue[/], etc
 ======================================================================
   - [red]Red[/] ([bold red]bold[/])           - [magenta]Magenta[/] ([bold magenta]bold[/])
-  - [yellow]Yellow[/] ([bold yellow]bold[/])        - [white]White[/] ([bold white]bold[/])
+  - [yellow]Yellow[/] ([bold yellow]bold[/])        - [white]White[/] ([bold white]bold[/]) (default)
   - [green]Green[/] ([bold green]bold[/])         - [black on white]Black[/] ([bold black on white]bold[/])
   - [cyan]Cyan[/] ([bold cyan]bold[/])
   - [blue]Blue[/] ([bold blue]bold[/])
@@ -122,28 +120,29 @@ WELCOME_COLORS = [
 ]
 
 LOAD_START = """
-  Type the First or partial name of the character you would like to load.
-  You may EDIT a card once loaded. Leave empty to return to Main Menu.
+  Enter the First or partial name of the character you would like to LOAD.
+  You may EDIT a card once loaded. Enter nothing to return to the Main Menu.
 """
 
 UPDATE_OPTIONS = """
   Enter the NUMBER for the field you wish to edit.
   Enter nothing to go back.
 ======================================================================
-  1. Name               6. Race/Species
-  2. Title              7. Skin Color
+  1. Name               6. Race/Species     11. Card Color
+  2. Title              7. Skin Color       12. Delete Character
   3. Gender             8. Hair Color
   4. Class/Role         9. Eye Color
   5. World/Setting      10. Tags
 """
 
 ARCHIVE_START = """
-  Enter a sort method below:
-  Enter nothing to go back.
+  Enter the NUMBER for the sorting method you wish to use.
+  Enter nothing to return to the Main Menu.
   -------------------------------------------------
+  Sort by:
   1. First Name             6. Race/Species
   2. Last Name              7. Tags
-  3. Gender
+  3. Gender                 8. Card Color
   4. Class/Role
   5. World/Setting
 """
@@ -170,21 +169,12 @@ def clear():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-# console = Console()      !! UNUSED / REMOVE this punk !!
-# def capatalize_keys(data):
-#     new_data = {}
-#     for key, value in data.items():
-#         new_key = key.replace("_", " ").title()
-#         new_data[new_key] = value
-#     return new_data
-
-
 # DEV TOOL FUNCTION (be careful using this, as it overwrites ALL cards)
 def update_char_data(char, field, new_data):
-    if char not in os.listdir(DIRECTORY_TEST):
+    if char not in os.listdir(DIRECTORY_CHARS):
         input(f"[bold red]'{char}' not found! Continue...[/]")
         return
-    char_path = os.path.join(DIRECTORY_TEST, char)
+    char_path = os.path.join(DIRECTORY_CHARS, char)
     char_dict = {}
     with open(char_path, "r") as file:
         char_dict = yaml.safe_load(file)
@@ -193,51 +183,153 @@ def update_char_data(char, field, new_data):
         yaml.dump(char_dict, file, sort_keys=False)
     print(f"[bold green]Successfully updated {char} file[/]")
 
-
+# ==================================================
+# 
+# 
+# 
+# 
 # CLI TOOLS
+# -----SOLUTION FOR DOPPELGANGERS-----
+def doppelganger(first, last, directory):
+    base_fname = first.strip().replace(" ", "_").lower()
+    base_lname = last.strip().replace(" ", "_").lower()
+    
+    if base_lname:
+        base = f"{base_fname}_{base_lname}"
+    else:
+        base = base_fname
+    
+    # Try base.yaml, then base_01.yaml, base_02.yaml, etc...
+    filename = f"{base}.yaml"
+    path = os.path.join(directory, filename)
+    if not os.path.exists(path):
+        return filename
+        
+    # Increment until we find a free slot
+    counter = 1
+    while True:
+        filename = f"{base}_{counter:02}.yaml"
+        path = os.path.join(directory, filename)
+        if not os.path.exists(path):
+            return filename
+        counter += 1
+    
 # -----SAVE FUNCTION-----
-def save_character_yaml(char_data, directory, new_char=True):
-    # Ensure directory exists
+def save_character_yaml(char_data, directory, new_char=True, old_file=None):
     os.makedirs(directory, exist_ok=True)
 
-    # Noramlize filename to lowercase and spaces to underscores
-    # then build the full path safely.
+    # Normalize name
     safe_fname = char_data["first_name"].strip().replace(" ", "_").lower()
-    if char_data["last_name"] != "":
-        safe_lname = char_data["last_name"].strip().replace(" ", "_").lower()
-        file_name = f"{safe_fname}_{safe_lname}.yaml"
+    safe_lname = char_data["last_name"].strip().replace(" ", "_").lower()
+    
+    # Build the base filename
+    if safe_lname:
+        base_file = f"{safe_fname}_{safe_lname}.yaml"
     else:
-        file_name = f"{safe_fname}.yaml"
+        base_file = f"{safe_fname}.yaml"
+
+    # Prevent accidental overrites with incrementation
+    if new_char:
+        # Character is new , always check for duplicates
+        if os.path.exists(os.path.join(directory, base_file)):
+            print(f"\n  [red]A file with this name already exists: '{base_file}'\n  Dealing with the new doppelganger! (incrementing filename)[/]")
+        file_name = doppelganger(char_data["first_name"], char_data["last_name"], directory)
+    elif old_file and old_file != base_file:
+        # Name changed , ensure uniqueness
+        if os.path.exists(os.path.join(directory, base_file)):
+            print(f"\n  [red]A file with this name already exists: '{base_file}'\n  Dealing with the new doppelganger![/] (incrementing filename)")
+        file_name = doppelganger(char_data["first_name"], char_data["last_name"], directory)
+    else:
+        # Name did NOT change , keep same filename
+        file_name = base_file
     full_path = os.path.join(directory, file_name)
 
-    # Prevent accidental overrites  -- TO DO: Add confirmation of overwrite, OR incrementing name-tag
-    if new_char and os.path.exists(full_path):
-        print(
-            f"\n[red]File '{file_name}' already exists. Creating incremented character.[/]"
-        )
-        if char_data["last_name"] != "":
-            safe_lname = char_data["last_name"].strip().replace(" ", "_").lower()
-            file_name = f"{safe_fname}_{safe_lname}_01.yaml"
-        else:
-            file_name = f"{safe_fname}_01.yaml"
-        full_path = os.path.join(directory, file_name)
-
-    # Write YAML character card!
+    # Write YAML character card and ensure date_created exists
     if DEBUG_MODE:
-        print(f"[yellow]DEBUG absolute path: {os.path.abspath(full_path)}[/]")
+        print(f"  [yellow]DEBUG absolute path: {os.path.abspath(full_path)}[/]")
     if "date_created" not in char_data:
         char_data["date_created"] = datetime.now().strftime("%b %d %Y (%H:%M)")
     with open(full_path, "w", encoding="utf-8") as file:
         yaml.dump(char_data, file, sort_keys=False)
 
-    if new_char:
-        print(
-            f"[bold green]Saved character to archive:[/] '{full_path}'\nOn {char_data.get('date_created', 'Now')}"
-        )
-    else:
-        print(f"[bold green]Updated character at archive:[/] '{full_path}'")
-    return True
+    # ----Delete old file if renaming-----
+    if old_file and old_file != file_name:
+        old_path = os.path.join(directory, old_file)
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+                print(f"  [yellow]Removed old character file:[/] {old_file}")
+            except OSError as e:
+                print(f"  [bold red]Failed to delete old file:[/]  {e}")
 
+    if new_char:
+        print(f"  [green]Saved character to archive:[/] '{full_path}'\n  On {char_data.get('date_created', 'Now')}")
+    else:
+        print(f"  [green]Updated character at archive:[/] '{full_path}'")
+
+    return file_name
+
+
+# -----CARD COLOR PICKER-----
+def card_color_picker(current_color="white"):
+    color_picking = True
+    chosen = current_color
+    
+    while color_picking:
+        clear()
+        hc = get_hourly_color()
+        print(Panel.fit(CREATE_END, title="[CHARACTER CREATOR]", box=box.DOUBLE, style=hc))
+        
+        color_choice = input("  Card color: ").strip().lower()
+        
+        if color_choice in AVAILABLE_COLORS:
+            if color_choice == "black":
+                chosen = "black on white"
+            elif color_choice == "bold black":
+                chosen = "bold black on white"
+            else:
+                chosen = color_choice
+            color_picking = False
+
+        elif color_choice == "":
+            chosen = "white"
+            color_picking = False
+
+        else:
+            print(f"\n  '{color_choice}' is an invalid option")
+            input("  Press Enter to continue...")
+    
+    return chosen
+    
+# -----TAG EDITOR-----
+def tag_editor(existing_tags):
+    tags = existing_tags[:]  # Copying to avoid original mutating :(
+    
+    print("[green]  Enter a tag name to add it.[/]")
+    print("[green]  Enter a tag name prefixed with a minus to remove the tag\n  for example, enter -tall to remove tall.[/]")
+    print("[green]  Press Enter with no text to finish.\n[/]")
+    
+    while True:
+        t = input("  Tag editor: ").strip()
+        if t == "":
+            break
+        # REMOVE TAG
+        if t.startswith("-"):
+            tag_to_remove = t[1:].strip()
+            if tag_to_remove in tags:
+                tags.remove(tag_to_remove)
+                print(f"  Remove tag: {tag_to_remove}\n")
+            else:
+                print(f"  '{tag_to_remove}' not found\n")
+            continue
+        # ADD TAG
+        if t not in tags:
+            tags.append(t)
+            print(f"  Added tag: {t}\n")
+        else:
+            print(f"  Tag '{t}' already exists\n")
+            
+    return tags
 
 # -----CREATE FUNCTION-----
 def create_character():
@@ -262,110 +354,122 @@ def create_character():
     print(
         Panel.fit(CREATE_START, title="[CHARACTER CREATOR]", box=box.DOUBLE, style=hc)
     )
-    new_char["first_name"] = input("First name: ").strip()
-    new_char["middle_name"] = input("\nMiddle name: ").strip()
-    new_char["last_name"] = input("\nLast name: ").strip()
-    new_char["title"] = input("\nTitle: ").strip()
-    new_char["gender"] = input("\nGender: ").strip()
-    new_char["role"] = input("\nClass or role (wizard, acrobat, monk): ").strip()
-    new_char["world"] = input("\nWorld or setting the character is from: ").strip()
-    new_char["race"] = input("\nRace or species: ").strip()
-    new_char["skin"] = input("\nSkin color or tone (peach, dark, purple): ").strip()
-    new_char["hair"] = input("\nHair color: ").strip()
-    new_char["eye"] = input("\nEye color: ").strip()
-    tags = True
-    print("""\n>> Add additional tags (press Enter with no text to finish).
-   Example tags: tall, chef, evil, eyepatch, robot arm, mute
+    new_char["first_name"] = input("  First name: ").strip()
+    new_char["middle_name"] = input("\n  Middle name: ").strip()
+    new_char["last_name"] = input("\n  Last name: ").strip()
+    new_char["title"] = input("\n  Title: ").strip()
+    new_char["gender"] = input("\n  Gender: ").strip()
+    new_char["role"] = input("\n  Class or role (wizard, acrobat, monk): ").strip()
+    new_char["world"] = input("\n  World or setting the character is from: ").strip()
+    new_char["race"] = input("\n  Race or species: ").strip()
+    new_char["skin"] = input("\n  Skin color or tone (peach, dark, purple): ").strip()
+    new_char["hair"] = input("\n  Hair color: ").strip()
+    new_char["eye"] = input("\n  Eye color: ").strip()
+    print("""\n  Add and remove tags here. Tags act as short notes and extra descriptors.
+  Example tags: tall, chef, evil, eyepatch, robot arm, mute
 """)
-    while tags:
-        choice = input("Tag to add: ")
-        if choice != "":
-            new_char["tags"].append(choice)
-            continue
-        tags = False
-    color_picking = True
-    while color_picking:
-        clear()
-        hc = get_hourly_color()
-        print(
-            Panel.fit(CREATE_END, title="[CHARACTER CREATOR]", box=box.DOUBLE, style=hc)
-        )
-        color_choice = input("Card color: ").strip().lower()
-        if color_choice in AVAILABLE_COLORS:
-            if color_choice == "black":
-                new_char["card_color"] = "black on white"
-            elif color_choice == "bold black":
-                new_char["card_color"] = "bold black on white"
-            else:
-                new_char["card_color"] = color_choice
-            color_picking = False
-        else:
-            print(
-                f"\n  '{color_choice}' is an invalid option. Please choose from the available colors listed above."
-            )
-            input("Press Enter to continue...")
+    new_char["tags"] = tag_editor([])
+    new_char["card_color"] = card_color_picker()
 
-    save_character_yaml(new_char, DIRECTORY_TEST)
+    new_fname = save_character_yaml(new_char, DIRECTORY_CHARS)
+    new_char["_file_name"] = new_fname
 
-
+# ==================================================
+# 
+# 
+# 
+# 
 # -----UPDATE FUNCTION-----
 def update_character_yaml(char_data):
+    old_file = char_data.get("_file_name")
+
     clear()
     updated_char = deepcopy(char_data)
     updating = True
+
     while updating:
         hc = get_hourly_color()
-        print(
-            Panel.fit(UPDATE_OPTIONS, title="[Character Editor]", box=box.DOUBLE, style=hc)
-        )
+        print(Panel.fit(UPDATE_OPTIONS, title="[Character Editor]", box=box.DOUBLE, style=hc))
         choice = input(">> ").strip()
+        
         match choice:
             case "1":
-                print(f'\n  Current Name: {updated_char.get("first_name", "")} {updated_char.get("middle_name", "")} {updated_char.get("last_name", "")}\n')
+                name_parts = [
+                    updated_char.get("first_name", "").strip(),
+                    updated_char.get("middle_name", "").strip(),
+                    updated_char.get("last_name", "").strip(),
+                ]
+                ould_name = " ".join(p for p in name_parts if p)
+                print(f'\n  Old Name: {ould_name}\n')
                 updated_char["first_name"] = input("  New First name: ").strip()
                 updated_char["middle_name"] = input("  New Middle name: ").strip()
                 updated_char["last_name"] = input("  New Last name: ").strip()
             case "2":
-                print(f'\n  Current Title: {updated_char.get("title", "")}\n')
+                print(f'\n  Old Title: {updated_char.get("title", "")}\n')
                 updated_char["title"] = input("  New Title: ").strip()
             case "3":
-                print(f'\n  Current Gender: {updated_char.get("gender", "")}\n')
+                print(f'\n  Old Gender: {updated_char.get("gender", "")}\n')
                 updated_char["gender"] = input("  New Gender: ").strip()
             case "4":
-                print(f'\n  Current Class/Role: {updated_char.get("role", "")}\n')
-                updated_char["role"] = input("  New Class or role (wizard, acrobat, monk): ").strip()
+                print(f'\n  Old Class/Role: {updated_char.get("role", "")}\n')
+                updated_char["role"] = input("  New Class/Role (wizard, acrobat, monk): ").strip()
             case "5":
-                print(f'\n  Current World/Setting: {updated_char.get("world", "")}\n')
-                updated_char["world"] = input("  New World or setting the character is from: ").strip()
+                print(f'\n  Old World/Setting: {updated_char.get("world", "")}\n')
+                updated_char["world"] = input("  New World/Setting: ").strip()
             case "6":
-                print(f'\n  Current Race: {updated_char.get("race", "")}\n')
-                updated_char["race"] = input("  New Race or species: ").strip()
+                print(f'\n  Old Race: {updated_char.get("race", "")}\n')
+                updated_char["race"] = input("  New Race/Species: ").strip()
             case "7":
-                print(f'\n  Current Skin: {updated_char.get("skin", "")}\n')
-                updated_char["skin"] = input("  New Skin color or tone (peach, dark, purple): ").strip()
+                print(f'\n  Old Skin: {updated_char.get("skin", "")}\n')
+                updated_char["skin"] = input("  New Skin color/tone: ").strip()
             case "8":
-                print(f'\n  Current Hair: {updated_char.get("hair", "")}\n')
+                print(f'\n  Old Hair: {updated_char.get("hair", "")}\n')
                 updated_char["hair"] = input("  New Hair color: ").strip()
             case "9":
-                print(f'\n  Current Eye: {updated_char.get("eye", "")}\n')
+                print(f'\n  Old Eye: {updated_char.get("eye", "")}\n')
                 updated_char["eye"] = input("  New Eye color: ").strip()
-            case "10":  # TAGS stub
-                pass
-            case _:
+            case "10":
+                print(f"  Old tags: {', '.join(updated_char.get('tags', [])) or 'None'}\n")
+                updated_char["tags"] = tag_editor(updated_char.get("tags", []))
+            case "11":
+                print(f"  Old Card Color: {updated_char.get('card_color', 'white')}")
+                updated_char["card_color"] = card_color_picker(updated_char.get("card_color", "white"))
+            case "12":
+                print("  --- [bold red]Are you sure you wish to delete this character? Type DELETE to confirm.[/] ---")
+                confirmation = input(">> ").strip().upper()
+                if confirmation == "DELETE":
+                    try:
+                        os.remove(os.path.join(DIRECTORY_CHARS, old_file))
+                        print(f"  [bold red]Character deleted:[/] {old_file}")
+                    except OSError as e:
+                        print(f"  [bold red]Failed to delete character file:[/] {e}")
+                    # Exit the editor immediately. Nothing left to save :(
+                    return None
+                else:
+                    print("  [yellow]Delete cancelled.\n")
+            case "":
                 updating = False
+            case _:
+                print("  Invalid option. Please enter a valid number (1-12)\n")
 
-    save_character_yaml(updated_char, DIRECTORY_TEST, False)
+    if updated_char is None:
+        return None
+    clear()
+    new_fname = save_character_yaml(updated_char, DIRECTORY_CHARS, False, old_file)
+    if new_fname:
+        updated_char["_file_name"] = new_fname
+        
     return updated_char
 
 
 # -----YAML VALIDATION-----
 def validate_character_yaml(char_data):
     fixed = False
-    validated = {}
+    validated = dict(char_data)
     
     for key, default in CARD_TEMPLATE.items():
         # Missing data
-        if key not in char_data:
+        if key not in validated:
             if key == "version":
                 validated[key] = VERSION
             elif key == "date_created":
@@ -375,17 +479,16 @@ def validate_character_yaml(char_data):
             fixed = True
             print(f"\n  Updated '{key}' field")
         else:
-            value = char_data[key]
+            value = validated[key]
             if key == "version":
-                if char_data["version"] != VERSION:
+                if value != VERSION:
                     validated[key] = VERSION
                     fixed = True
             elif key == "tags" and not isinstance(value, list):
                 validated[key] = []
                 fixed = True
                 print(f"\n  Updated '{key}' field")
-            else:
-                validated[key] = value
+            # Otherwise keep validated key as-is
 
     return validated, fixed
 
@@ -406,7 +509,7 @@ def load_character_yaml():
         # Normalizing search key
         search_key = "_".join(name.split())
         matches = []
-        for char in os.listdir(DIRECTORY_TEST):
+        for char in os.listdir(DIRECTORY_CHARS):
             lower_name = char.lower()
             if search_key in lower_name:
                 matches.append(char)
@@ -432,7 +535,7 @@ def load_character_yaml():
             idx = input("\nEnter a character by number: ").strip()
             if not idx.isdigit():
                 clear()
-                print(f"\n>> Please enter a number")
+                print("\n>> Please enter a number")
                 continue
 
             selection = int(idx)
@@ -450,19 +553,21 @@ def load_character_yaml():
         return None
         
     # Load YAML
-    card_path = os.path.join(DIRECTORY_TEST, file_path)
+    card_path = os.path.join(DIRECTORY_CHARS, file_path)
     with open(card_path, "r") as file:
         char_card = yaml.safe_load(file)
         if not isinstance(char_card, dict):
-            print(f"  [bold red]YAML file is invalid or empty.[/]")
+            print("  [bold red]YAML file is invalid or empty.[/]")
             return None
         validated, fixed = validate_character_yaml(char_card)
         
         if fixed:
-            print(f"\n  [bold green]Validated missing data field(s) for: {file_path}[/]\n")
+            print(f"\n  [green]Validated missing data field(s) for: {file_path}[/]\n")
             with open(card_path, "w", encoding="utf-8") as file:
                 yaml.dump(validated, file, sort_keys=False)
-                
+        # Attaching the real filename so update/save can use it... no more accidental deletions
+        validated["_file_name"] = file_path
+        
         return validated
 
 
@@ -505,15 +610,7 @@ def display_character_card(char_data):
     tags_str = ", ".join(char_data.get("tags", []))
     display_t.add_row(f"Tags:{' .' * 11}", tags_str)
 
-    # lines = []    # OLD LINES BUILDING
-    # for lefto, righto in zip(left, right):
-    #     lines.append(f"{lefto:<30} {righto}")
-    # lines.append(f"Created: {char_data.get('date_created', 'The day after tomorrow\'s yesterday')}")
-    # tags_str = ", ".join(char_data.get("tags", ""))
-    # lines.append(f"Tags: {tags_str}")
 
-    # Previously: LOAD_CARD = yaml.dump(capatalize_keys(char_data), sort_keys=False)
-    # LOAD_CARD = "\n".join(lines)
     print(
         Panel(
             display_t,
@@ -524,14 +621,18 @@ def display_character_card(char_data):
             width=72,
         )
     )
-    print("  [bold white]Update character card?  yes/No[/]")
+    print("  [bold white]Update character card?  1. Yes | 2. No[/]")
     choice = input(">> ").strip()
-    if choice in {"y", "ye", "yes", "yep", "oui"}:
+    if choice in {"1", "y", "ye", "yes", "yep", "oui"}:
         new_data = update_character_yaml(char_data)
         if new_data:
             char_data = new_data
         
-
+# ==================================================
+# 
+# 
+# 
+# 
 # -----ARCHIVE HELPER-----
 def build_display(card, attr_name):
     # Build base name
@@ -599,8 +700,8 @@ def archive_display_cards(cards):
 # -----SORT LOGIC-----
 def archive_sort_cards(sort_type):
     cards = []
-    for f in os.listdir(DIRECTORY_TEST):
-        with open(os.path.join(DIRECTORY_TEST, f), "r") as file:
+    for f in os.listdir(DIRECTORY_CHARS):
+        with open(os.path.join(DIRECTORY_CHARS, f), "r") as file:
             card = yaml.safe_load(file)
             cards.append(card)
 
@@ -612,27 +713,27 @@ def archive_sort_cards(sort_type):
             archive_display_cards(display)
         case "2":
             print("[blue]OPTION 2: Last Name[/]")
-            sorted_cards = sorted(cards, key=lambda c: c.get("last_name", ""))
+            sorted_cards = sorted(cards, key=lambda c: (c.get("last_name", ""), c.get("first_name", "")))
             display = [build_display(c, "last_name") for c in sorted_cards]
             archive_display_cards(display)
         case "3":
             print("[red]OPTION 3: Gender[/]")
-            sorted_cards = sorted(cards, key=lambda c: c.get("gender", ""))
+            sorted_cards = sorted(cards, key=lambda c: (c.get("gender", ""), c.get("first_name", "")))
             display = [build_display(c, "gender") for c in sorted_cards]
             archive_display_cards(display)
         case "4":
             print("[green]OPTION 4: Role[/]")
-            sorted_cards = sorted(cards, key=lambda c: c.get("role", ""))
+            sorted_cards = sorted(cards, key=lambda c: (c.get("role", ""), c.get("first_name", "")))
             display = [build_display(c, "role") for c in sorted_cards]
             archive_display_cards(display)
         case "5":
             print("[blue]OPTION 5: World[/]")
-            sorted_cards = sorted(cards, key=lambda c: c.get("world", ""))
+            sorted_cards = sorted(cards, key=lambda c: (c.get("world", ""), c.get("first_name", "")))
             display = [build_display(c, "world") for c in sorted_cards]
             archive_display_cards(display)
         case "6":
             print("[red]OPTION 6: Race[/]")
-            sorted_cards = sorted(cards, key=lambda c: c.get("race", ""))
+            sorted_cards = sorted(cards, key=lambda c: (c.get("race", ""), c.get("first_name", "")))
             display = [build_display(c, "race") for c in sorted_cards]
             archive_display_cards(display)
         case "7":
@@ -641,6 +742,11 @@ def archive_sort_cards(sort_type):
                 cards, key=lambda c: ", ".join(tag.lower() for tag in c.get("tags", []))
             )
             display = [build_display(c, "tags") for c in sorted_cards]
+            archive_display_cards(display)
+        case "8":
+            print("[white]OPTION 8: Card Colors[/]")
+            sorted_cards = sorted(cards, key=lambda c: (c.get("card_color", ""), c.get("first_name", "")))
+            display = [build_display(c, "card_color") for c in sorted_cards]
             archive_display_cards(display)
         case "":
             return
@@ -651,6 +757,21 @@ def archive_sort_cards(sort_type):
 
 # -----SORT DISPLAY-----
 def archive_select_mode():
+    # Safety if the character archive is EMPTY
+    if not os.listdir(DIRECTORY_CHARS):
+        hc = get_hourly_color()
+        print(
+            Panel(
+                "Gasp! There are currently no characters in the archive!\n"
+                "Come back after you've created a few character cards.",
+                title="[Archive Overview]",
+                box=box.DOUBLE,
+                style=hc,
+                width=72,
+            )
+        )
+        input(">> ")
+        return
     viewing = True
     while viewing:
         hc = get_hourly_color()
@@ -664,13 +785,16 @@ def archive_select_mode():
         archive_sort_cards(choice)
         clear()
         
-
-
+# ==================================================
+# 
+# 
+# 
+# 
 # -----OVERVIEW HELPERS-----
 def overview_helper_counter(field):
     result = 0
-    for f in os.listdir(DIRECTORY_TEST):
-        with open(os.path.join(DIRECTORY_TEST, f), "r") as file:
+    for f in os.listdir(DIRECTORY_CHARS):
+        with open(os.path.join(DIRECTORY_CHARS, f), "r") as file:
             char_data = yaml.safe_load(file)
             if field != "tags":
                 if char_data.get(field):
@@ -683,8 +807,8 @@ def overview_helper_counter(field):
 
 def overview_helper_dict(field):
     result = {}
-    for f in os.listdir(DIRECTORY_TEST):
-        with open(os.path.join(DIRECTORY_TEST, f), "r") as file:
+    for f in os.listdir(DIRECTORY_CHARS):
+        with open(os.path.join(DIRECTORY_CHARS, f), "r") as file:
             char_data = yaml.safe_load(file)
             value = char_data.get(field)
             if not value:
@@ -726,18 +850,23 @@ def overview_helper_common(dict):
     return total, common
 
 
-# A counter → total characters
-# A list → all tags
-# A set → unique tags
-# A dict → counts per world
-# A dict → counts per race
-# A dict → counts per role
-# A list → creation dates (if you want earliest/latest)
-
-
 # -----BUILD ARCHIVE DATA-----
 def overview_display():
     hc = get_hourly_color()
+    # Safety if the character archive is EMPTY
+    if not os.listdir(DIRECTORY_CHARS):
+        print(
+            Panel(
+                "Gasp! There are currently no characters in the archive!\n"
+                "Go create a few character cards, then come back for some fun stats!",
+                title="[Archive Overview]",
+                box=box.DOUBLE,
+                style=hc,
+                width=72,
+            )
+        )
+        input(">> ")
+        return
     count_tags = overview_helper_dict("tags")
     count_letters = overview_helper_dict("first_name")
     count_worlds = overview_helper_dict("world")
@@ -751,7 +880,7 @@ def overview_display():
     total_roles, common_role = overview_helper_common(count_roles)
 
     left = [
-        f"Total Characters: {len(os.listdir(DIRECTORY_TEST))}",
+        f"Total Characters: {len(os.listdir(DIRECTORY_CHARS))}",
         f"Total Worlds: {total_worlds}",
         f"Total Races: {total_races}",
         f"Total Roles: {total_roles}",
@@ -768,7 +897,7 @@ def overview_display():
 
     lines = []
     for lefto, righto in zip(left, right):
-        lines.append(f"  {lefto:<34} {righto}")
+        lines.append(f"  {lefto:<28} {righto}")
     lines.append(f"  {'Characters per World:':<34} {'Gender Split:'}")
     lines_worlds = []
     for world in count_worlds:
@@ -801,17 +930,16 @@ def overview_display():
     )
     input(">> ")
 
+# ==================================================
+# 
+# 
+# 
+# 
 # -----DEV TOOL HELPER-----
 def dev_helper(field, data):
-    confirmation = (
-        input(
-            f"Are you sure you wish to update the '{field}' of all cards to '{data}' ?  yes/no\n>>  "
-        )
-        .strip()
-        .lower()
-    )
+    confirmation = input(f"Are you sure you wish to update the '{field}' of all cards to '{data}' ?  yes/No\n>>  ").strip().lower()
     if confirmation in {"y", "ye", "yes"}:
-        for f in os.listdir(DIRECTORY_TEST):
+        for f in os.listdir(DIRECTORY_CHARS):
             print(f"Replacing {f}'s {field} data with {data}")
             # Load character cards and overwrite their data in the field
             update_char_data(f, field, data)
@@ -846,13 +974,13 @@ def clean_yamls():
     if not DEBUG_MODE:
         dbm_return()
     
-    for filename in os.listdir(DIRECTORY_TEST):
-        path = os.path.join(DIRECTORY_TEST, filename)
+    for filename in os.listdir(DIRECTORY_CHARS):
+        path = os.path.join(DIRECTORY_CHARS, filename)
         
         # FILENAME CLEANING
         clean_name = sanitize_filename(filename)
         if clean_name != filename:
-            new = os.path.join(DIRECTORY_TEST, clean_name)
+            new = os.path.join(DIRECTORY_CHARS, clean_name)
             os.rename(path, new)
             print(f"  [bold yellow]Renamed: {filename} -> {clean_name}")
             path = new

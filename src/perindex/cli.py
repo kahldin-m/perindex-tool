@@ -16,7 +16,7 @@ def close():
 
 def welcome_screen():
     hourly_color = core.get_hourly_color()
-    print(Panel(core.WELCOME_TEXT, expand=False, box=box.DOUBLE, style=hourly_color))
+    print(Panel(core.WELCOME_TEXT, expand=False, title="[Main Menu]", box=box.DOUBLE, style=hourly_color))
     return input(">>  ").strip().upper()
 
 # MAIN
@@ -30,7 +30,7 @@ def main():
             if n in {"1", "CREATE"}:
                 core.clear()
                 core.create_character()
-            elif n in {"2", "LOAD", "UPDATE"}:
+            elif n in {"2", "LOAD", "UPDATE", "EDIT"}:
                 core.clear()
                 loading = True
                 while loading:
