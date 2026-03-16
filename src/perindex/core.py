@@ -18,6 +18,7 @@ VERSION = 1.0
 DEBUG_MODE = 0
 DIRECTORY_CHARS = "data/characters"
 # DIRECTORY_TEST = "data/test"  # Dev test character folder
+os.makedirs(DIRECTORY_CHARS, exist_ok=True)
 
 CARD_TEMPLATE = {
         "version": VERSION,
@@ -216,8 +217,6 @@ def doppelganger(first, last, directory):
     
 # -----SAVE FUNCTION-----
 def save_character_yaml(char_data, directory, new_char=True, old_file=None):
-    os.makedirs(directory, exist_ok=True)
-
     # Normalize name
     safe_fname = char_data["first_name"].strip().replace(" ", "_").lower()
     safe_lname = char_data["last_name"].strip().replace(" ", "_").lower()

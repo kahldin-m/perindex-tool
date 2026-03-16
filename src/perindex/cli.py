@@ -1,6 +1,5 @@
 # cli.py
 # IMPORTS
-# import os
 import sys
 import perindex.core as core
 

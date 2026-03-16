@@ -11,19 +11,19 @@ And here's an example of what an overview of the archive—or collection of char
 
 
 ## Requirements
-- Python 3.10+
-You can check your python version with this:
+- Python 3.10+ (You can check your python version with this:)
 ```
 python --version
 ```
 - pip
-Most Python installations already include pip.
-If your system doesn't have it, you can install/upgrade it with:
+(Most Python installations already include pip. If your system doesn't have it, you can install/upgrade it with:)
 ```
 python -m pip install --upgrade pip
 ```
+Note: If *python* doesn't work in the console, try *python3* in its place
 
 ## How To Use
+Starting in your preferred terminal:
 1. Clone the repo
 ```
 git clone https://github.com/kahldin-m/perindex-tool.git
