@@ -1,4 +1,4 @@
-# Perindex‑Tool — v1.0 🍐
+# Perindex‑Tool — v1.0.1 🍐
 ## About (Pear-what-now?)
 Perindex-Tool is a terminal‑based character archival tool I built for keeping track of my many characters across multiple fictional worlds and settings.
 It provides a fast and easy way to create, sort and retrieve locally stored character cards in a stable, human-readable format.
@@ -11,12 +11,12 @@ And here's an example of what an overview of the archive—or collection of char
 
 
 ## Requirements
-- Python 3.10+ (You can check your python version with this:)
+- Python 3.10+ (You can check your python version with this: )
 ```
 python --version
 ```
 - pip
-(Most Python installations already include pip. If your system doesn't have it, you can install/upgrade it with:)
+(Most Python installations already include pip. If your system doesn't have it, you can install/upgrade it with: )
 ```
 python -m pip install --upgrade pip
 ```
@@ -40,6 +40,12 @@ pip install -e .
 ```
 perindex
 ```
+
+If you ever need to update the tool, use the following command while in /perindex-tool:
+```
+git pull
+```
+This will update the code while preserving your character archive in /data/characters
 
 ### Third-Party Libraries Used
   - PyYAML

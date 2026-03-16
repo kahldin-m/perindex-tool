@@ -144,7 +144,7 @@ ARCHIVE_START = """
   1. First Name             6. Race/Species
   2. Last Name              7. Tags
   3. Gender                 8. Card Color
-  4. Class/Role
+  4. Class/Role             9. Date Created
   5. World/Setting
 """
 
@@ -246,7 +246,7 @@ def save_character_yaml(char_data, directory, new_char=True, old_file=None):
     # Write YAML character card and ensure date_created exists
     if DEBUG_MODE:
         print(f"  [yellow]DEBUG absolute path: {os.path.abspath(full_path)}[/]")
-    if "date_created" not in char_data:
+    if not char_data.get("date_created"):
         char_data["date_created"] = datetime.now().strftime("%b %d %Y (%H:%M)")
     with open(full_path, "w", encoding="utf-8") as file:
         yaml.dump(char_data, file, sort_keys=False)
@@ -487,6 +487,10 @@ def validate_character_yaml(char_data):
                 validated[key] = []
                 fixed = True
                 print(f"\n  Updated '{key}' field")
+            elif key == "date_created" and not value:
+                validated[key] = datetime.now().strftime("%b %d %Y (%H:%M)")
+                fixed = True
+                print(f"\n  Updated '{key}' field")
             # Otherwise keep validated key as-is
 
     return validated, fixed
@@ -652,8 +656,12 @@ def build_display(card, attr_name):
             return ln
         return fn
 
-    # ATTRBUTE SORT MODE
+    # DATE SORT MODE
+    if attr_name == "date_created":
+        date_str = card.get("date_created", "Unknown date")
+        return f"{base_name} ({date_str})"
 
+    # ATTRBUTE SORT MODE
     # Take an attribute: "gender", "world", "role" etc.
     attr_value = card.get(f"{attr_name}", "")
     if isinstance(attr_value, list):
@@ -695,6 +703,15 @@ def archive_display_cards(cards):
         if index < total_cards:
             input("\nPress Enter to go to next page >>")
 
+
+# -----DATE CREATED PARSER-----
+def parse_by_dates(card):
+    raw = card.get("date_created", "")
+    try:
+        return datetime.strptime(raw, "%b %d %Y (%H:%M)")
+    except Exception:
+        # If somehow invalid... just push it to the bottom
+        return datetime.min
 
 # -----SORT LOGIC-----
 def archive_sort_cards(sort_type):
@@ -746,6 +763,11 @@ def archive_sort_cards(sort_type):
             print("[white]OPTION 8: Card Colors[/]")
             sorted_cards = sorted(cards, key=lambda c: (c.get("card_color", ""), c.get("first_name", "")))
             display = [build_display(c, "card_color") for c in sorted_cards]
+            archive_display_cards(display)
+        case "9":
+            print("[white]OPTION 9: Date Created[/]")
+            sorted_cards = sorted(cards, key=lambda c: (parse_by_dates(c), c.get("first_name", "")))
+            display = [build_display(c, "date_created") for c in sorted_cards]
             archive_display_cards(display)
         case "":
             return
