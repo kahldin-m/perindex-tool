@@ -1,4 +1,4 @@
-# Perindex‑Tool — v1.0.1 🍐
+# Perindex‑Tool — v1.1.1 🍐
 ## About (Pear-what-now?)
 Perindex-Tool is a terminal‑based character archival tool I built for keeping track of my many characters across multiple fictional worlds and settings.
 It provides a fast and easy way to create, sort and retrieve locally stored character cards in a stable, human-readable format.
@@ -51,23 +51,8 @@ This will update the code while preserving your character archive in /data/chara
   - PyYAML
   - Rich
 
-### To-Do
-- Day 1: CLI Initialization ✔
-  - Menu, routing, loop, placeholder functions.
-- Day 2: Character Creation ✔
-  - Prompt user -> build YAML -> save file.
-- Day 3: Load Character ✔
-  - Load character cards by smart-name search from saved yaml file.
-- Day 4: Sorting ✔
-  - Sort by name, world, creation date, etc.
-- Day 5: Dev Tool ✔
-  - Dev tool updates specific card fields across all cards
-- Day 6: Archive Data Overview + Add "date_created" to cards ✔
-  - List metadata across the whole archive of character cards. e.g., total cards, total count of fields, etc.
-- Day 7: Schema Validation + Data Integrity + Update Tool ✔
-  - Validate and auto-fix existing cards ; open cards to edit fields and save upadtes.
-- Day 8: Function Modularity and Cleanup ✔
-  - Refactor functions for modularity. (tag editor, card color)
-  - Clean up unused or temp. commented code.
-  - Tighten search scope?
-  - Ability to delete cards 😅
+### Possibilities
+- Add richer archive visualisations or statistics
+- Explore decoupling UI, operations, repository and storage layers (repository pattern)
+- Alternative storage backends (SQLite)
+- Expand metadata analysis (relationships, world summaries, etc)

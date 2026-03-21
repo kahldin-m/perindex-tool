@@ -14,7 +14,7 @@ from rich.table import Table
 
 
 # CONSTANTS
-VERSION = 1.0
+VERSION = 1.1
 DEBUG_MODE = 0
 DIRECTORY_CHARS = "data/characters"
 # DIRECTORY_TEST = "data/test"  # Dev test character folder
@@ -950,6 +950,60 @@ def overview_display():
         )
     )
     input(">> ")
+    clear()
+    alpha_breakdown()
+    input(">> ")
+
+
+def alpha_breakdown():
+    hc = get_hourly_color()
+    alpha_list = {}     # Build alphabet dict
+    for letter_code in range(ord("A"), ord("Z") + 1):
+        letter = chr(letter_code)
+        alpha_list[letter] = 0
+    # Populate dict with literal first-name first-letter counts
+    for name in os.listdir(DIRECTORY_CHARS):
+        alpha_list[name[0].upper()] += 1
+
+    # Split alphabet into three sections -- making tuple pairs (A, 0)
+    pairs = list(alpha_list.items())
+    col1 = pairs[0:7]       # A - G
+    col2 = pairs[7:14]      # H - N
+    col3 = pairs[14:20]     # O - T
+    col4 = pairs[20:26]     # U - Z
+    columns = [col1, col2, col3, col4]
+    
+    max_len = max(len(col) for col in columns)
+    for col in columns:
+        while len(col) < max_len:
+            col.append(("", ""))    # Pad cells so we can build a table
+
+    # Build the rich.Table
+    tablet = Table.grid(padding=(0, 5))
+    
+    for i in range(4):
+        tablet.add_column(no_wrap=True)
+    
+    for row in zip(*columns):
+        cells = []
+        for (letter, value) in row:
+            if letter:
+                cells.append(f"[bold white]{letter} :[/] [blue]{value}[/]")
+            else:
+                cells.append("")
+        
+        tablet.add_row(cells[0], cells[1], cells[2], cells[3])
+    
+    print(
+        Panel(
+            tablet,
+            title="[Alphabetical Breakdown]",
+            safe_box=True,
+            box=box.DOUBLE,
+            width=72,
+            style=hc,
+        )
+    )
 
 # ==================================================
 # 
