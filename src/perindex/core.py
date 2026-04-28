@@ -13,11 +13,12 @@ from rich.panel import Panel
 from rich.table import Table
 
 
-# CONSTANTS
+# CONSTANTS / *CONFIGS  *(not yet implemented)
 VERSION = 1.1
 DEBUG_MODE = 0
 DIRECTORY_CHARS = "data/characters"
 # DIRECTORY_TEST = "data/test"  # Dev test character folder
+PAGE_LIMIT_ARCHIVE = 12
 os.makedirs(DIRECTORY_CHARS, exist_ok=True)
 
 CARD_TEMPLATE = {
@@ -364,8 +365,8 @@ def create_character():
     new_char["skin"] = input("\n  Skin color or tone (peach, dark, purple): ").strip()
     new_char["hair"] = input("\n  Hair color: ").strip()
     new_char["eye"] = input("\n  Eye color: ").strip()
-    print("""\n  Add and remove tags here. Tags act as short notes and extra descriptors.
-  Example tags: tall, chef, evil, eyepatch, robot arm, mute
+    print("""\n  [green]Add or remove tags here. Tags act as short notes and extra descriptors.
+  Example tags: tall, chef, evil, eyepatch, robot arm, mute[/]
 """)
     new_char["tags"] = tag_editor([])
     new_char["card_color"] = card_color_picker()
@@ -676,7 +677,7 @@ def archive_display_cards(cards):
     height = shutil.get_terminal_size().lines
     twidth = shutil.get_terminal_size().columns
     wresize = 72 if twidth > 72 else twidth
-    usable = height - 6  # Adjusting for panel borders, title, padding
+    usable = PAGE_LIMIT_ARCHIVE
 
     # Using a paging loop to ensure readability if the archive is bigger than 10 cards
     current_page = 1

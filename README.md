@@ -1,4 +1,4 @@
-# Perindex‑Tool — v1.1.1 🍐
+# Perindex‑Tool — v1.1.2 🍐
 ## About (Pear-what-now?)
 Perindex-Tool is a terminal‑based character archival tool I built for keeping track of my many characters across multiple fictional worlds and settings.
 It provides a fast and easy way to create, sort and retrieve locally stored character cards in a stable, human-readable format.
